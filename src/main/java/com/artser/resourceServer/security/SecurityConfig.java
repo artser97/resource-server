@@ -2,6 +2,7 @@ package com.artser.resourceServer.security;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -13,14 +14,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
  * Configures our application with Spring Security to restrict access to our API endpoints.
  */
 @EnableWebSecurity
+@Configuration
 public class SecurityConfig {
 
   @Value("${auth0.audience}")
@@ -34,15 +34,11 @@ public class SecurityConfig {
     http
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf().disable()
-        .authorizeHttpRequests(authorize ->
-            authorize
-                .requestMatchers(HttpMethod.GET, "/**")
-                .permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**")
-                .permitAll()
-                .requestMatchers("/api/private").authenticated()
-        )
-        .httpBasic();
+        .authorizeHttpRequests()
+        .requestMatchers(HttpMethod.OPTIONS, "/**")
+        .permitAll()
+        .requestMatchers("/api/private").authenticated()
+        .and().oauth2ResourceServer().jwt();
     return http.build();
   }
 
