@@ -1,14 +1,18 @@
 package com.artser.resourceServer.security;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -16,6 +20,8 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @EnableWebSecurity
 @Configuration
+@RequiredArgsConstructor
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
   @Value("${auth0.audience}")
@@ -30,8 +36,11 @@ public class SecurityConfig {
         .authorizeHttpRequests()
         .requestMatchers(HttpMethod.OPTIONS, "/**")
         .permitAll()
-        .requestMatchers("/api/private", "/api/admin").authenticated()
-        .and().oauth2ResourceServer().jwt().decoder(jwtDecoder());
+        .requestMatchers("/api/private", "/api/admin", "/api/read").authenticated()
+        .and().oauth2ResourceServer()
+        .jwt()
+        .decoder(jwtDecoder())
+        .jwtAuthenticationConverter(permissionsConverter());
     return http.build();
   }
 
@@ -45,5 +54,16 @@ public class SecurityConfig {
     OAuth2TokenValidator<Jwt> withAudience = new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator);
     jwtDecoder.setJwtValidator(withAudience);
     return jwtDecoder;
+  }
+
+  private JwtAuthenticationConverter permissionsConverter() {
+    final var jwtAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
+    jwtAuthoritiesConverter.setAuthoritiesClaimName("permissions");
+    jwtAuthoritiesConverter.setAuthorityPrefix("");
+
+    final var jwtAuthConverter = new JwtAuthenticationConverter();
+    jwtAuthConverter.setJwtGrantedAuthoritiesConverter(jwtAuthoritiesConverter);
+
+    return jwtAuthConverter;
   }
 }
